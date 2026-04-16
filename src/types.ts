@@ -41,3 +41,18 @@ export const PERSONAS = {
 } as const;
 
 export type PersonaKey = keyof typeof PERSONAS;
+
+export const MODELS = {
+  'gemini-3.1-flash': {
+    id: 'gemini-3.1-flash-live-preview',
+    name: 'Gemini 3.1 Flash',
+    label: 'FLASH 3.1'
+  },
+  'gemini-2.0-flash': {
+    id: 'gemini-2.0-flash-exp',
+    name: 'Gemini 2.0 Flash',
+    label: 'FLASH 2.0'
+  }
+} as const;
+
+export type ModelKey = keyof typeof MODELS;

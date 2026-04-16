@@ -27,10 +27,11 @@ async function startServer() {
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const voiceName = url.searchParams.get('voice') || 'Zephyr';
     const systemInstruction = url.searchParams.get('instruction') || "Tu es un assistant vocal expert, concis et naturel. Réponds toujours en français. Garde tes réponses courtes pour une conversation fluide.";
+    const model = url.searchParams.get('model') || 'gemini-3.1-flash-live-preview';
 
     // Connect to Gemini Live API
     const sessionPromise = ai.live.connect({
-      model: 'gemini-3.1-flash-live-preview',
+      model,
       callbacks: {
         onopen: () => {
           console.log('Connected to Gemini Live');

@@ -1,63 +1,73 @@
-import { Mic, MicOff } from 'lucide-react';
+import { Mic, MicOff, RadioTower, Sparkles, Settings2 } from 'lucide-react';
 import { AppState } from '../types';
 
 interface HeaderProps {
   appState: AppState;
   toggleConnection: () => Promise<void>;
+  onToggleConfig: () => void;
 }
 
-export function Header({ appState, toggleConnection }: HeaderProps) {
+const stateLabel: Record<AppState, string> = {
+  idle: 'Prêt au lancement',
+  connecting: 'Connexion en cours',
+  listening: 'Écoute active',
+  speaking: 'Réponse vocale',
+  error: 'Erreur de session',
+};
+
+export function Header({ appState, toggleConnection, onToggleConfig }: HeaderProps) {
+  const isLive = appState === 'listening' || appState === 'speaking';
+
   return (
-    <header className="h-20 flex items-center justify-between px-8 shrink-0 z-50">
-      <div className="flex items-center gap-4 group cursor-default">
-        <div className="relative">
-          <div className="w-8 h-8 bg-blue-500 rounded-xl rotate-12 group-hover:rotate-45 transition-transform duration-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]" />
-          <div className="absolute inset-0 w-8 h-8 bg-white/20 rounded-xl" />
+    <header className="h-22 flex items-center justify-between px-5 md:px-8 shrink-0 z-50">
+      <div className="flex items-center gap-4 cursor-default">
+        <div className="brand-emblem">
+          <div className="brand-emblem-inner" />
+          <Sparkles className="w-4 h-4 text-[#fef08a]" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/40">
+          <span className="text-[1.4rem] leading-none tracking-tight font-semibold font-display text-white">
             NeuroLive
           </span>
-          <span className="text-[9px] font-bold text-blue-400 uppercase tracking-[3px]">Voice Interface</span>
+          <span className="text-[10px] font-semibold text-white/55 uppercase tracking-[0.28em]">
+            Voice Control Studio
+          </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className={`hidden md:flex px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest items-center gap-2.5 border transition-all duration-500 glass ${
-          appState === 'listening' || appState === 'speaking'
-            ? 'border-emerald-500/30 text-emerald-400'
-            : appState === 'error'
-            ? 'border-red-500/30 text-red-400'
-            : 'border-white/10 text-white/40'
-        }`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${
-            appState === 'listening' || appState === 'speaking' 
-              ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse' 
-              : appState === 'error' 
-              ? 'bg-red-500' 
-              : 'bg-white/20'
-          }`} />
-          {appState === 'idle' ? 'System Ready' : appState === 'connecting' ? 'Initializing...' : appState === 'error' ? 'Connection Error' : 'Full Duplex Active'}
+      <div className="flex items-center gap-3 md:gap-6">
+        <button
+          onClick={onToggleConfig}
+          className="hidden md:flex p-3 rounded-full border border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/10 hover:text-white transition-all"
+        >
+          <Settings2 className="w-4 h-4" />
+        </button>
+
+        <div className="hidden md:flex px-4 py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.16em] items-center gap-2 border border-white/10 bg-white/[0.03]">
+          <RadioTower className={`w-3.5 h-3.5 ${isLive ? 'text-emerald-300' : appState === 'error' ? 'text-rose-300' : 'text-white/50'}`} />
+          <span className={`${isLive ? 'text-emerald-100' : appState === 'error' ? 'text-rose-100' : 'text-white/70'}`}>
+            {stateLabel[appState]}
+          </span>
         </div>
 
         <button
           onClick={toggleConnection}
           disabled={appState === 'connecting'}
-          className={`h-11 px-6 rounded-xl font-bold text-[12px] uppercase tracking-widest flex items-center gap-3 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl ${
+          className={`h-11 px-5 rounded-xl font-semibold text-[11px] uppercase tracking-[0.18em] flex items-center gap-2.5 transition-all duration-300 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed border ${
             appState === 'idle' || appState === 'error'
-              ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'
-              : 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20'
+              ? 'bg-cyan-300 text-slate-950 border-cyan-200 hover:bg-cyan-200'
+              : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-100 border-rose-300/30'
           }`}
         >
           {appState === 'idle' || appState === 'error' ? (
             <>
               <Mic className="w-4 h-4" />
-              <span>Start Session</span>
+              <span>Démarrer</span>
             </>
           ) : (
             <>
               <MicOff className="w-4 h-4" />
-              <span>End Session</span>
+              <span>Arrêter</span>
             </>
           )}
         </button>
