@@ -1,8 +1,8 @@
 <div align="center">
 <img width="1200" height="475" alt="NeuroLive Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 
-# 🧠 NeuroLive | High-Performance AI Voice Assistant
-**Experience the Future of Full-Duplex Conversational AI with Gemini 3 Flash Live.**
+# 🧠 NeuroLive | Assistant Vocal IA Haute Performance
+**Découvrez le futur de l'IA conversationnelle en full-duplex avec Gemini 3 Flash Live.**
 
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -14,57 +14,57 @@
 
 ---
 
-## 🚀 Overview
-**NeuroLive** is a production-grade, real-time voice assistant architecture designed for extremely low latency and natural, full-duplex interactions. Leveraging the **Gemini 3 Flash Live API**, it allows users to interrupt the AI naturally, just like a human conversation.
+## 🚀 Présentation
+**NeuroLive** est une architecture d'assistant vocal de qualité production, conçue pour une latence extrêmement faible et des interactions naturelles en full-duplex. En utilisant l'API **Gemini 3 Flash Live**, il permet aux utilisateurs d'interrompre l'IA naturellement, tout comme dans une conversation humaine.
 
-The system bypasses traditional REST overhead by using a dedicated WebSocket pipeline for bidirectional PCM audio streaming.
+Le système contourne les limitations traditionnelles du REST en utilisant un pipeline WebSocket dédié pour le streaming audio bidirectionnel en PCM.
 
-## ✨ Key Features
-- **⚡ Ultra-Low Latency**: End-to-end response times under 200ms using raw PCM/WebSocket transmission.
-- **🗣️ Natural Interruption (Barge-in)**: Advanced Voice Activity Detection (VAD) handles interruptions immediately.
-- **🎭 Multi-Persona System**: Choose between specialized profiles (Expert, Creative, Professional, etc.).
-- **💬 Live Transcription**: Real-time visual feedback of both your speech and the AI's response.
-- **🎚️ Adaptive Audio Pipeline**: Native browser AudioWorklets for high-performance audio processing without main-thread blocking.
-- **📈 Real-time Metrics**: Monitor latency, jitter, and signal status directly from the dashboard.
+## ✨ Fonctionnalités Clés
+- **⚡ Latence Ultra-Faible** : Temps de réponse de bout en bout inférieur à 200ms grâce à la transmission brute PCM/WebSocket.
+- **🗣️ Interruption Naturelle (Barge-in)** : Détection d'activité vocale (VAD) avancée qui gère les interruptions immédiatement.
+- **🎭 Système Multi-Personnalités** : Choisissez entre des profils spécialisés (Expert, Créatif, Professionnel, etc.).
+- **💬 Transcription en Direct** : Feedback visuel en temps réel de votre parole et de la réponse de l'IA.
+- **🎚️ Pipeline Audio Adaptatif** : AudioWorklets natifs pour un traitement audio haute performance sans bloquer le thread principal.
+- **📈 Métriques en Temps Réel** : Suivez la latence, le jitter et l'état de la connexion directement depuis l'interface.
 
-## 🛠️ Tech Stack
-- **Frontend**: React 18, Vite, Framer Motion (animations), Lucide Icons, Tailwind CSS.
-- **Backend**: Node.js, Fastify for WebSocket orchestration.
-- **LLM**: Gemini 3 Flash Live Preview.
-- **Audio**: Web Audio API, PCM AudioWorklets (16kHz Capture / 24kHz Playback).
+## 🛠️ Stack Technique
+- **Frontend** : React 18, Vite, Framer Motion (animations), Lucide Icons, Tailwind CSS.
+- **Backend** : Node.js, Fastify pour l'orchestration des WebSockets.
+- **LLM** : Gemini 3 Flash Live Preview.
+- **Audio** : Web Audio API, PCM AudioWorklets (Capture 16kHz / Lecture 24kHz).
 
-## 📦 Installation & Setup
+## 📦 Installation et Configuration
 
-### Prerequisites
+### Prérequis
 - Node.js (v18+)
-- A Google AI Studio API Key
+- Une clé API Google AI Studio
 
-### Local Development
-1. **Clone the repository**:
+### Développement Local
+1. **Cloner le dépôt** :
    ```bash
    git clone https://github.com/Mayss/Live-Voice-Assistant.git
    cd Live-Voice-Assistant
    ```
-2. **Install dependencies**:
+2. **Installer les dépendances** :
    ```bash
    npm install
    ```
-3. **Configure Environment**:
-   Create a `.env.local` file in the root:
+3. **Configurer l'Environnement** :
+   Créez un fichier `.env.local` à la racine :
    ```env
-   GEMINI_API_KEY=your_api_key_here
+   GEMINI_API_KEY=votre_cle_api_ici
    ```
-4. **Start the development server**:
+4. **Lancer le serveur de développement** :
    ```bash
    npm run dev
    ```
 
-## 🗺️ Roadmap
-For a detailed view of our future plans, check the [Full Roadmap](./ROADMAP.md).
-- [x] Phase 1: Robust Audio Pipeline & Core Refactoring
-- [ ] Phase 2: Multimodal Vision & Image Analysis
-- [ ] Phase 3: Persistent Memory & Vector Database Integration
-- [ ] Phase 4: Production Deployment & Scaling
+## 🗺️ Feuille de Route (Roadmap)
+Pour une vue détaillée de nos plans futurs, consultez la [Feuille de Route Complète](./ROADMAP.md).
+- [x] Phase 1 : Pipeline Audio Robuste et Refactorisation du Core
+- [ ] Phase 2 : Vision Multimodale et Analyse d'Images
+- [ ] Phase 3 : Mémoire Persistante et Intégration de Base de Données Vectorielle
+- [ ] Phase 4 : Déploiement en Production et Mise à l'Échelle
 
-## 📄 License
-MIT License - Copyright (c) 2026 NeuroLive Team.
+## 📄 Licence
+Licence MIT - Copyright (c) 2026 Équipe NeuroLive.
