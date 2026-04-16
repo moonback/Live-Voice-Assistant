@@ -1,53 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Loader2, Volume2, Activity } from 'lucide-react';
+import { MicOff, Loader2, Volume2, Activity } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AudioStreamer } from './lib/audioUtils';
+import { Header } from './components/Header';
 
-type AppState = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error';
-
-type TranscriptionMsg = {
-  id: string;
-  role: 'user' | 'model';
-  text: string;
-  finished: boolean;
-};
-
-const PERSONAS = {
-  expert: {
-    id: 'expert',
-    name: 'Expert (Concis & Direct)',
-    voice: 'Zephyr',
-    instruction: 'Tu es un assistant vocal expert, concis et naturel. Réponds toujours en français. Garde tes réponses courtes pour une conversation fluide.'
-  },
-  amical: {
-    id: 'amical',
-    name: 'Amical (Chaleureux & Bavard)',
-    voice: 'Kore',
-    instruction: 'Tu es un assistant vocal amical, chaleureux et très bavard. Tu aimes développer tes réponses et montrer de l\'empathie. Réponds en français.'
-  },
-  pro: {
-    id: 'pro',
-    name: 'Professionnel (Neutre & Formel)',
-    voice: 'Charon',
-    instruction: 'Tu es un assistant professionnel, neutre et très formel. Tu utilises le vouvoiement et un vocabulaire soutenu. Réponds en français.'
-  },
-  creatif: {
-    id: 'creatif',
-    name: 'Créatif (Énergique & Expressif)',
-    voice: 'Puck',
-    instruction: 'Tu es un assistant vocal créatif, énergique et très expressif. Tu utilises des métaphores et as un ton enthousiaste. Réponds en français.'
-  },
-  direct: {
-    id: 'direct',
-    name: 'Direct (Autoritaire & Bref)',
-    voice: 'Fenrir',
-    instruction: 'Tu es un assistant vocal direct et autoritaire. Tu vas droit au but sans fioritures. Réponds en français de manière très brève.'
-  }
-};
+import { AppState, TranscriptionMsg, PERSONAS, PersonaKey } from './types';
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>('idle');
-  const [selectedPersona, setSelectedPersona] = useState<keyof typeof PERSONAS>('expert');
+  const [selectedPersona, setSelectedPersona] = useState<PersonaKey>('expert');
   const [customTraits, setCustomTraits] = useState('');
   const [transcriptions, setTranscriptions] = useState<TranscriptionMsg[]>([]);
   const streamerRef = useRef<AudioStreamer | null>(null);
@@ -120,49 +81,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen bg-[#0C0D0E] text-white flex flex-col font-sans overflow-hidden">
-      {/* Header */}
-      <header className="h-16 bg-[#15171B] border-b border-[#2A2D35] flex items-center justify-between px-6 shrink-0">
-        <div className="flex items-center gap-3 font-bold tracking-tight text-[18px]">
-          <div className="w-6 h-6 bg-[#3B82F6] rounded" />
-          GEMINI LIVE ARCHITECT
-          <span className="text-[#8E9299] font-normal text-sm ml-2 hidden sm:inline">v3.1 Production Node</span>
-        </div>
-        <div className={`hidden md:flex px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide items-center gap-1.5 border ${
-          appState === 'listening' || appState === 'speaking' 
-            ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' 
-            : appState === 'error'
-            ? 'bg-red-500/10 border-red-500/30 text-red-500'
-            : 'bg-[#8E9299]/10 border-[#8E9299]/30 text-[#8E9299]'
-        }`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${
-            appState === 'listening' || appState === 'speaking' ? 'bg-[#10B981]' : appState === 'error' ? 'bg-red-500' : 'bg-[#8E9299]'
-          }`} />
-          {appState === 'idle' ? 'HORS LIGNE' : appState === 'connecting' ? 'CONNEXION...' : appState === 'error' ? 'ERREUR' : 'FULL DUPLEX ACTIVE'}
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={toggleConnection}
-            disabled={appState === 'connecting'}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              appState === 'idle' || appState === 'error'
-                ? 'bg-[#3B82F6] hover:bg-blue-600 text-white'
-                : 'bg-[#EF4444] hover:bg-red-600 text-white'
-            }`}
-          >
-            {appState === 'idle' || appState === 'error' ? (
-              <>
-                <Mic className="w-4 h-4" />
-                <span className="hidden sm:inline">Démarrer Session</span>
-              </>
-            ) : (
-              <>
-                <MicOff className="w-4 h-4" />
-                <span className="hidden sm:inline">Terminer Session</span>
-              </>
-            )}
-          </button>
-        </div>
-      </header>
+      <Header appState={appState} toggleConnection={toggleConnection} />
 
       {/* Main Layout */}
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-[280px_1fr_320px] gap-[1px] bg-[#2A2D35] overflow-hidden">
