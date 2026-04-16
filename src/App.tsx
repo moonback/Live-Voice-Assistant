@@ -2,14 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Loader2, Volume2, Activity } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AudioStreamer } from './lib/audioUtils';
-import { getSystemPrompt, BASE_SYSTEM_PROMPT } from './lib/systemPrompt';
-import { PromptConfig } from './components/PromptConfig';
-import { LiveVisualizer } from './components/LiveVisualizer';
-import { VideoStreamer } from './lib/videoUtils';
-import { SessionStats } from './components/SessionStats';
-import { Camera, CameraOff, Video } from 'lucide-react';
 
 type AppState = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error';
+
+type TranscriptionMsg = {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  finished: boolean;
+};
 
 const PERSONAS = {
   expert: {
@@ -48,64 +49,62 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>('idle');
   const [selectedPersona, setSelectedPersona] = useState<keyof typeof PERSONAS>('expert');
   const [customTraits, setCustomTraits] = useState('');
-  const [transcript, setTranscript] = useState('');
-  const [isVisionEnabled, setIsVisionEnabled] = useState(false);
-  const [vadThreshold, setVadThreshold] = useState(0.01);
+  const [transcriptions, setTranscriptions] = useState<TranscriptionMsg[]>([]);
   const streamerRef = useRef<AudioStreamer | null>(null);
-  const videoRef = useRef<VideoStreamer | null>(null);
+  const transcriptionsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return () => {
-      streamerRef.current?.stop();
-      videoRef.current?.stop();
+      if (streamerRef.current) {
+        streamerRef.current.stop();
+      }
     };
   }, []);
 
+  useEffect(() => {
+    if (transcriptionsEndRef.current) {
+      transcriptionsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [transcriptions]);
+
   const toggleConnection = async () => {
     if (appState !== 'idle' && appState !== 'error') {
-      console.log('[Action] Fermeture manuelle de la session');
+      // Disconnect
       streamerRef.current?.stop();
-      videoRef.current?.stop();
       streamerRef.current = null;
-      videoRef.current = null;
       setAppState('idle');
-      setTranscript('');
       return;
     }
 
-    console.log('[Action] Initialisation de la connexion...');
     setAppState('connecting');
+    setTranscriptions([]); // Clear previous transcriptions
     try {
       const streamer = new AudioStreamer();
       streamerRef.current = streamer;
 
       streamer.onStateChange = (state) => {
-        console.log(`[State] Transition vers: ${state}`);
         setAppState(state);
-        
-        // VAD Adaptatif : augmenter le seuil quand l'IA parle pour ignorer l'écho des haut-parleurs
-        if (state === 'speaking') {
-          streamerRef.current?.setThreshold(vadThreshold * 4); // Très robuste pendant la parole IA
-        } else if (state === 'listening') {
-          streamerRef.current?.setThreshold(vadThreshold); // Sensibilité normale pendant l'écoute
-        }
       };
 
-      streamer.onTranscript = (text, reset) => {
-        if (reset) {
-          setTranscript(text);
-        } else {
-          setTranscript(prev => prev + text);
-        }
-      };
-
-      streamer.onInterrupted = () => {
-        console.log('[Event] L\'IA a été interrompue par l\'utilisateur');
-        setTranscript(prev => prev + '... [Interrompu]');
+      streamer.onTranscription = (role, text, finished) => {
+        setTranscriptions(prev => {
+          const last = prev[prev.length - 1];
+          // If the last message is from the same role and not finished, append to it
+          if (last && last.role === role && !last.finished) {
+            const updated = [...prev];
+            updated[updated.length - 1] = { ...last, text: last.text + text, finished };
+            return updated;
+          } else {
+            // Create a new message
+            return [...prev, { id: Math.random().toString(), role, text, finished }];
+          }
+        });
       };
 
       const persona = PERSONAS[selectedPersona];
-      const finalInstruction = getSystemPrompt(`${persona.instruction}${customTraits.trim() ? ` Traits additionnels: ${customTraits}` : ''}`);
+      const finalInstruction = customTraits.trim() 
+        ? `${persona.instruction} Traits additionnels: ${customTraits}`
+        : persona.instruction;
 
       // Determine WebSocket URL
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -113,17 +112,6 @@ export default function App() {
       
       await streamer.connect(wsUrl);
       await streamer.startRecording();
-
-      if (isVisionEnabled) {
-        console.log('[Action] Démarrage de la capture vidéo...');
-        const videoStreamer = new VideoStreamer();
-        videoRef.current = videoStreamer;
-        videoStreamer.start((base64) => {
-          if (streamer.getWs()?.readyState === WebSocket.OPEN) {
-            streamer.getWs()?.send(JSON.stringify({ type: 'image', data: base64 }));
-          }
-        });
-      }
     } catch (err) {
       console.error('Failed to start', err);
       setAppState('error');
@@ -208,25 +196,11 @@ export default function App() {
             
             <div className="mb-5">
               <div className="flex justify-between mb-2 text-[11px] text-[#8E9299]">
-                <span>Seuil de Détection (VAD)</span>
-                <span>{(vadThreshold * 1000).toFixed(0)} pts</span>
+                <span>Seuil VAD</span>
+                <span>-42dB</span>
               </div>
-              <input 
-                type="range"
-                min="0.001"
-                max="0.1"
-                step="0.001"
-                value={vadThreshold}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setVadThreshold(val);
-                  streamerRef.current?.setThreshold(val);
-                }}
-                className="w-full h-1 bg-[#2A2D35] rounded-full appearance-none cursor-pointer accent-[#3B82F6]"
-              />
-              <div className="flex justify-between mt-1 text-[9px] text-[#8E9299]">
-                <span>Sensible</span>
-                <span>Robuste</span>
+              <div className="h-1 bg-[#2A2D35] rounded-full relative">
+                <div className="absolute left-0 top-0 h-full bg-[#3B82F6] rounded-full w-[70%]"></div>
               </div>
             </div>
 
@@ -240,20 +214,6 @@ export default function App() {
               </div>
             </div>
 
-            <label className="text-[12px] text-[#8E9299] mb-2 block mt-6">Mode Multimodal</label>
-            <button
-               onClick={() => setIsVisionEnabled(!isVisionEnabled)}
-               disabled={appState !== 'idle' && appState !== 'error'}
-               className={`w-full p-2.5 rounded-md text-[13px] font-medium flex items-center justify-center gap-2 border transition-all ${
-                 isVisionEnabled 
-                   ? 'bg-[#10B981]/10 border-[#10B981]/50 text-[#10B981]' 
-                   : 'bg-[#15171B] border-[#2A2D35] text-[#8E9299]'
-               }`}
-            >
-              {isVisionEnabled ? <Video className="w-4 h-4" /> : <CameraOff className="w-4 h-4" />}
-              {isVisionEnabled ? 'Vision Activée' : 'Activer Vision'}
-            </button>
-
             <label className="text-[12px] text-[#8E9299] mb-2 block mt-6">Pipeline Codec</label>
             <div className="font-mono text-[11px] text-[#10B981]">PCM @ 16kHz / 24kHz</div>
           </div>
@@ -265,9 +225,16 @@ export default function App() {
             <div className="absolute w-[300px] h-[300px] border border-[#3B82F6]/10 rounded-full" />
             <div className="absolute w-[220px] h-[220px] border border-[#3B82F6]/10 rounded-full" />
             
-            {(appState === 'speaking' || appState === 'listening') && (
-              <div className="absolute w-[280px] h-[100px] flex items-center justify-center z-0">
-                <LiveVisualizer streamer={streamerRef.current} active={appState === 'speaking' || appState === 'listening'} />
+            {appState === 'speaking' && (
+              <div className="absolute w-[280px] h-[100px] flex items-center justify-center gap-1 z-0 opacity-50">
+                {[40, 80, 120, 100, 140, 90, 50].map((h, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-[3px] bg-[#3B82F6] rounded-sm"
+                    animate={{ height: [h * 0.3, h, h * 0.3] }}
+                    transition={{ repeat: Infinity, duration: 1 + i * 0.1, ease: "easeInOut" }}
+                  />
+                ))}
               </div>
             )}
 
@@ -311,19 +278,21 @@ export default function App() {
           <div className="p-4 border-b border-[#2A2D35] flex items-center justify-between">
             <span className="text-[11px] font-semibold text-[#8E9299] uppercase tracking-[1px]">Transcription Live</span>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scrollbar-hide">
-            <PromptConfig instruction={getSystemPrompt(`${PERSONAS[selectedPersona].instruction}${customTraits.trim() ? ` Traits additionnels: ${customTraits}` : ''}`)} />
-            
-            <SessionStats appState={appState} />
-
-            <div className="p-5 border-t border-[#2A2D35] text-[13px] leading-relaxed bg-[#15171B]/50 rounded-xl">
-              <div className="font-mono text-[10px] text-[#3B82F6] mb-1 uppercase">Transcription Live</div>
-              <div className="text-[#D1D5DB] min-h-[100px] max-h-[200px] overflow-y-auto custom-scrollbar italic">
-                {transcript || (
-                  <span className="text-[#8E9299]">En attente de la parole d'IA...</span>
-                )}
-              </div>
-            </div>
+          <div className="flex-1 overflow-y-auto flex flex-col p-5 gap-4">
+            {transcriptions.length === 0 ? (
+              <div className="text-[13px] text-[#8E9299] italic">En attente de la conversation...</div>
+            ) : (
+              transcriptions.map((msg) => (
+                <div key={msg.id} className="text-[13px] leading-relaxed">
+                  <div className={`font-mono text-[10px] mb-1 uppercase ${msg.role === 'user' ? 'text-[#10B981]' : 'text-[#3B82F6]'}`}>
+                    {msg.role === 'user' ? 'Vous' : 'Gemini'}
+                  </div>
+                  <span className="text-white">{msg.text}</span>
+                  {!msg.finished && <span className="inline-block w-1.5 h-3 ml-1 bg-[#8E9299] animate-pulse" />}
+                </div>
+              ))
+            )}
+            <div ref={transcriptionsEndRef} />
           </div>
           <div className="p-4 border-t border-[#2A2D35]">
             <span className="text-[11px] font-semibold text-[#8E9299] uppercase tracking-[1px] block mb-3">Contexte Actif</span>
