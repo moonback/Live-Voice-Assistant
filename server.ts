@@ -33,13 +33,13 @@ async function startServer() {
 
     const processInput = (data: any) => {
       if (!session) return;
-      if (Buffer.isBuffer(data)) {
-        const base64Audio = data.toString('base64');
-        session.sendRealtimeInput({
-          audio: { data: base64Audio, mimeType: 'audio/pcm;rate=16000' }
-        });
-      } else {
-        try {
+      try {
+        if (Buffer.isBuffer(data)) {
+          const base64Audio = data.toString('base64');
+          session.sendRealtimeInput({
+            audio: { data: base64Audio, mimeType: 'audio/pcm;rate=16000' }
+          });
+        } else {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'clientContent' && msg.text) {
              session.sendRealtimeInput({ text: msg.text });
@@ -49,9 +49,9 @@ async function startServer() {
                mediaChunks: [{ data: msg.data, mimeType: 'image/jpeg' }]
              });
           }
-        } catch (e) {
-          console.error('[WS] Erreur parsing message', e);
         }
+      } catch (e) {
+        console.error('[Gemini] Erreur lors de l\'envoi RealtimeInput:', e);
       }
     };
 

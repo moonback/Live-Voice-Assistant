@@ -82,9 +82,12 @@ export default function App() {
       streamer.onStateChange = (state) => {
         console.log(`[State] Transition vers: ${state}`);
         setAppState(state);
-        if (state === 'listening') {
-          // Keep transcript visible or reset it? 
-          // Usually better to keep it until next speaking turn
+        
+        // VAD Adaptatif : augmenter le seuil quand l'IA parle pour ignorer l'écho des haut-parleurs
+        if (state === 'speaking') {
+          streamerRef.current?.setThreshold(vadThreshold * 4); // Très robuste pendant la parole IA
+        } else if (state === 'listening') {
+          streamerRef.current?.setThreshold(vadThreshold); // Sensibilité normale pendant l'écoute
         }
       };
 
