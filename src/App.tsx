@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Loader2, Volume2, Activity } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AudioStreamer } from './lib/audioUtils';
+import { getSystemPrompt, BASE_SYSTEM_PROMPT } from './lib/systemPrompt';
+import { PromptConfig } from './components/PromptConfig';
 
 type AppState = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error';
 
@@ -71,9 +73,7 @@ export default function App() {
       };
 
       const persona = PERSONAS[selectedPersona];
-      const finalInstruction = customTraits.trim() 
-        ? `${persona.instruction} Traits additionnels: ${customTraits}`
-        : persona.instruction;
+      const finalInstruction = getSystemPrompt(`${persona.instruction}${customTraits.trim() ? ` Traits additionnels: ${customTraits}` : ''}`);
 
       // Determine WebSocket URL
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -247,9 +247,11 @@ export default function App() {
           <div className="p-4 border-b border-[#2A2D35] flex items-center justify-between">
             <span className="text-[11px] font-semibold text-[#8E9299] uppercase tracking-[1px]">Transcription Live</span>
           </div>
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-[#2A2D35] text-[13px] leading-relaxed">
-              <div className="font-mono text-[10px] text-[#3B82F6] mb-1 uppercase">Système</div>
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scrollbar-hide">
+            <PromptConfig instruction={getSystemPrompt(`${PERSONAS[selectedPersona].instruction}${customTraits.trim() ? ` Traits additionnels: ${customTraits}` : ''}`)} />
+            
+            <div className="p-5 border-t border-[#2A2D35] text-[13px] leading-relaxed bg-[#15171B]/50 rounded-xl">
+              <div className="font-mono text-[10px] text-[#3B82F6] mb-1 uppercase">Transcription Live</div>
               <span className="text-[#8E9299]">En attente de la transcription audio... (Non implémenté dans cette démo)</span>
             </div>
           </div>
