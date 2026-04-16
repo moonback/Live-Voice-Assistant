@@ -3,6 +3,7 @@ import { MicOff, Loader2, Volume2, Activity, Settings2, SlidersHorizontal, Shiel
 import { motion } from 'motion/react';
 import { AudioStreamer } from './lib/audioUtils';
 import { Header } from './components/Header';
+import { buildSystemPrompt } from './lib/prompts';
 
 import { AppState, TranscriptionMsg, PERSONAS, PersonaKey, MODELS, ModelKey } from './types';
 
@@ -72,10 +73,10 @@ export default function App() {
 
       const persona = PERSONAS[selectedPersona];
       const model = MODELS[selectedModel];
-      const finalInstruction = customTraits.trim() ? `${persona.instruction} Traits additionnels: ${customTraits}` : persona.instruction;
+      const systemPrompt = buildSystemPrompt(selectedPersona, customTraits);
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?voice=${encodeURIComponent(persona.voice)}&instruction=${encodeURIComponent(finalInstruction)}&model=${encodeURIComponent(model.id)}`;
+      const wsUrl = `${protocol}//${window.location.host}/ws?voice=${encodeURIComponent(persona.voice)}&instruction=${encodeURIComponent(systemPrompt)}&model=${encodeURIComponent(model.id)}`;
 
       await streamer.connect(wsUrl);
       await streamer.startRecording();
