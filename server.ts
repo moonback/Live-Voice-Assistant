@@ -19,9 +19,14 @@ async function startServer() {
   // Initialize Gemini AI
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', (ws: WebSocket, req: http.IncomingMessage) => {
     console.log('Client connected to WebSocket');
     let session: any = null;
+
+    // Parse configuration from URL
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const voiceName = url.searchParams.get('voice') || 'Zephyr';
+    const systemInstruction = url.searchParams.get('instruction') || "Tu es un assistant vocal expert, concis et naturel. Réponds toujours en français. Garde tes réponses courtes pour une conversation fluide.";
 
     // Connect to Gemini Live API
     const sessionPromise = ai.live.connect({
@@ -64,9 +69,9 @@ async function startServer() {
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
+          voiceConfig: { prebuiltVoiceConfig: { voiceName } },
         },
-        systemInstruction: "Tu es un assistant vocal expert, concis et naturel. Réponds toujours en français. Garde tes réponses courtes pour une conversation fluide.",
+        systemInstruction,
       },
     });
 

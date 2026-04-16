@@ -5,8 +5,43 @@ import { AudioStreamer } from './lib/audioUtils';
 
 type AppState = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error';
 
+const PERSONAS = {
+  expert: {
+    id: 'expert',
+    name: 'Expert (Concis & Direct)',
+    voice: 'Zephyr',
+    instruction: 'Tu es un assistant vocal expert, concis et naturel. Réponds toujours en français. Garde tes réponses courtes pour une conversation fluide.'
+  },
+  amical: {
+    id: 'amical',
+    name: 'Amical (Chaleureux & Bavard)',
+    voice: 'Kore',
+    instruction: 'Tu es un assistant vocal amical, chaleureux et très bavard. Tu aimes développer tes réponses et montrer de l\'empathie. Réponds en français.'
+  },
+  pro: {
+    id: 'pro',
+    name: 'Professionnel (Neutre & Formel)',
+    voice: 'Charon',
+    instruction: 'Tu es un assistant professionnel, neutre et très formel. Tu utilises le vouvoiement et un vocabulaire soutenu. Réponds en français.'
+  },
+  creatif: {
+    id: 'creatif',
+    name: 'Créatif (Énergique & Expressif)',
+    voice: 'Puck',
+    instruction: 'Tu es un assistant vocal créatif, énergique et très expressif. Tu utilises des métaphores et as un ton enthousiaste. Réponds en français.'
+  },
+  direct: {
+    id: 'direct',
+    name: 'Direct (Autoritaire & Bref)',
+    voice: 'Fenrir',
+    instruction: 'Tu es un assistant vocal direct et autoritaire. Tu vas droit au but sans fioritures. Réponds en français de manière très brève.'
+  }
+};
+
 export default function App() {
   const [appState, setAppState] = useState<AppState>('idle');
+  const [selectedPersona, setSelectedPersona] = useState<keyof typeof PERSONAS>('expert');
+  const [customTraits, setCustomTraits] = useState('');
   const streamerRef = useRef<AudioStreamer | null>(null);
 
   useEffect(() => {
@@ -35,9 +70,14 @@ export default function App() {
         setAppState(state);
       };
 
+      const persona = PERSONAS[selectedPersona];
+      const finalInstruction = customTraits.trim() 
+        ? `${persona.instruction} Traits additionnels: ${customTraits}`
+        : persona.instruction;
+
       // Determine WebSocket URL
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const wsUrl = `${protocol}//${window.location.host}/ws?voice=${encodeURIComponent(persona.voice)}&instruction=${encodeURIComponent(finalInstruction)}`;
       
       await streamer.connect(wsUrl);
       await streamer.startRecording();
@@ -102,14 +142,26 @@ export default function App() {
             <span className="text-[11px] font-semibold text-[#8E9299] uppercase tracking-[1px]">Configuration Audio</span>
           </div>
           <div className="p-5">
-            <label className="text-[12px] text-[#8E9299] mb-2 block">Modèle de Voix</label>
-            <select className="w-full bg-[#15171B] border border-[#2A2D35] p-2.5 rounded-md text-white mb-4 text-[13px] outline-none focus:border-[#3B82F6]">
-              <option>Zephyr (Default / Dynamic)</option>
-              <option>Puck (Bright / Energetic)</option>
-              <option>Charon (Deep / Authoritative)</option>
-              <option>Kore (Warm / Empathetic)</option>
-              <option>Fenrir (Strong / Direct)</option>
+            <label className="text-[12px] text-[#8E9299] mb-2 block">Personnalité & Voix</label>
+            <select 
+              value={selectedPersona}
+              onChange={(e) => setSelectedPersona(e.target.value as keyof typeof PERSONAS)}
+              disabled={appState !== 'idle' && appState !== 'error'}
+              className="w-full bg-[#15171B] border border-[#2A2D35] p-2.5 rounded-md text-white mb-4 text-[13px] outline-none focus:border-[#3B82F6] disabled:opacity-50"
+            >
+              {Object.values(PERSONAS).map(p => (
+                <option key={p.id} value={p.id}>{p.name} - Voix: {p.voice}</option>
+              ))}
             </select>
+
+            <label className="text-[12px] text-[#8E9299] mb-2 block">Traits additionnels (Optionnel)</label>
+            <textarea
+              value={customTraits}
+              onChange={(e) => setCustomTraits(e.target.value)}
+              disabled={appState !== 'idle' && appState !== 'error'}
+              placeholder="Ex: Parle comme un pirate, sois sarcastique..."
+              className="w-full bg-[#15171B] border border-[#2A2D35] p-2.5 rounded-md text-white mb-6 text-[13px] outline-none focus:border-[#3B82F6] disabled:opacity-50 resize-none h-20"
+            />
             
             <div className="mb-5">
               <div className="flex justify-between mb-2 text-[11px] text-[#8E9299]">
