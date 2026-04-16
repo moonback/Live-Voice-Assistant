@@ -80,7 +80,12 @@ export class AudioStreamer {
         class PCMProcessor extends AudioWorkletProcessor {
           constructor() {
             super();
-            this.threshold = 0.01; // Seuil pour éviter l'auto-interruption
+            this.threshold = 0.01;
+            this.port.onmessage = (e) => {
+              if (e.data.threshold !== undefined) {
+                this.threshold = e.data.threshold;
+              }
+            };
           }
           process(inputs, outputs, parameters) {
             const input = inputs[0];
@@ -188,6 +193,12 @@ export class AudioStreamer {
   getFrequencyData(dataArray: any) {
     if (this.analyser) {
       this.analyser.getByteFrequencyData(dataArray);
+    }
+  }
+
+   setThreshold(value: number) {
+    if (this.workletNode) {
+      this.workletNode.port.postMessage({ threshold: value });
     }
   }
 

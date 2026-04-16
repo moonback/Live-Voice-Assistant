@@ -32,7 +32,7 @@ export const LiveVisualizer: React.FC<LiveVisualizerProps> = ({ streamer, active
 
   return (
     <div className="flex items-center justify-center gap-1.5 h-32 w-full">
-      {Array.from(data).slice(0, 12).map((v: number, i) => {
+      {Array.from(data).slice(4, 20).map((v: number, i) => {
         // Multiplier pour rendre les petites variations plus visibles
         const height = Math.max(4, (v / 255) * 100);
         return (

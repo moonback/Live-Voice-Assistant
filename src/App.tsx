@@ -50,14 +50,14 @@ export default function App() {
   const [customTraits, setCustomTraits] = useState('');
   const [transcript, setTranscript] = useState('');
   const [isVisionEnabled, setIsVisionEnabled] = useState(false);
+  const [vadThreshold, setVadThreshold] = useState(0.01);
   const streamerRef = useRef<AudioStreamer | null>(null);
   const videoRef = useRef<VideoStreamer | null>(null);
 
   useEffect(() => {
     return () => {
-      if (streamerRef.current) {
-        streamerRef.current.stop();
-      }
+      streamerRef.current?.stop();
+      videoRef.current?.stop();
     };
   }, []);
 
@@ -205,11 +205,25 @@ export default function App() {
             
             <div className="mb-5">
               <div className="flex justify-between mb-2 text-[11px] text-[#8E9299]">
-                <span>Seuil VAD</span>
-                <span>-42dB</span>
+                <span>Seuil de Détection (VAD)</span>
+                <span>{(vadThreshold * 1000).toFixed(0)} pts</span>
               </div>
-              <div className="h-1 bg-[#2A2D35] rounded-full relative">
-                <div className="absolute left-0 top-0 h-full bg-[#3B82F6] rounded-full w-[70%]"></div>
+              <input 
+                type="range"
+                min="0.001"
+                max="0.1"
+                step="0.001"
+                value={vadThreshold}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setVadThreshold(val);
+                  streamerRef.current?.setThreshold(val);
+                }}
+                className="w-full h-1 bg-[#2A2D35] rounded-full appearance-none cursor-pointer accent-[#3B82F6]"
+              />
+              <div className="flex justify-between mt-1 text-[9px] text-[#8E9299]">
+                <span>Sensible</span>
+                <span>Robuste</span>
               </div>
             </div>
 

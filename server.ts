@@ -19,9 +19,10 @@ async function startServer() {
   // Initialize Gemini AI
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-  wss.on('connection', (ws: WebSocket, req: http.IncomingMessage) => {
+    wss.on('connection', (ws: WebSocket, req: http.IncomingMessage) => {
     console.log('Client connected to WebSocket');
     let session: any = null;
+    const messageQueue: any[] = [];
 
     // Parse configuration from URL
     const url = new URL(req.url || '', `http://${req.headers.host}`);
@@ -29,6 +30,30 @@ async function startServer() {
     const systemInstruction = url.searchParams.get('instruction') || "Tu es un assistant vocal...";
     
     console.log(`[WS] Nouvelle connexion - Voix: ${voiceName}, Instruction: ${systemInstruction.substring(0, 50)}...`);
+
+    const processInput = (data: any) => {
+      if (!session) return;
+      if (Buffer.isBuffer(data)) {
+        const base64Audio = data.toString('base64');
+        session.sendRealtimeInput({
+          audio: { data: base64Audio, mimeType: 'audio/pcm;rate=16000' }
+        });
+      } else {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.type === 'clientContent' && msg.text) {
+             session.sendRealtimeInput({ text: msg.text });
+          }
+          if (msg.type === 'image' && msg.data) {
+             session.sendRealtimeInput({
+               mediaChunks: [{ data: msg.data, mimeType: 'image/jpeg' }]
+             });
+          }
+        } catch (e) {
+          console.error('[WS] Erreur parsing message', e);
+        }
+      }
+    };
 
     // Connect to Gemini Live API
     const sessionPromise = ai.live.connect({
@@ -83,39 +108,20 @@ async function startServer() {
 
     sessionPromise.then(s => {
       session = s;
+      console.log('[Gemini] Session prête, traitement de la file d\'attente...');
+      while (messageQueue.length > 0) {
+        processInput(messageQueue.shift());
+      }
     }).catch(err => {
       console.error('Failed to connect to Gemini', err);
       ws.close();
     });
 
     ws.on('message', (data) => {
-      if (Buffer.isBuffer(data)) {
-        if (session) {
-          const base64Audio = data.toString('base64');
-          session.sendRealtimeInput({
-            audio: { data: base64Audio, mimeType: 'audio/pcm;rate=16000' }
-          });
-        }
+      if (session) {
+        processInput(data);
       } else {
-        try {
-          const msg = JSON.parse(data.toString());
-          console.log(`[Client] Message JSON reçu: ${msg.type}`);
-          if (msg.type === 'clientContent' && session && msg.text) {
-             console.log(`[Client] Texte envoyé manuellement: ${msg.text}`);
-             session.sendRealtimeInput({ text: msg.text });
-          }
-          if (msg.type === 'image' && session && msg.data) {
-             console.log('[Client] Frame vidéo reçue');
-             session.sendRealtimeInput({
-               mediaChunks: [{
-                 data: msg.data,
-                 mimeType: 'image/jpeg'
-               }]
-             });
-          }
-        } catch (e) {
-          console.error('[WS] Erreur parsing message client', e);
-        }
+        messageQueue.push(data);
       }
     });
 
