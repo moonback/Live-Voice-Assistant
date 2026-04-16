@@ -1,9 +1,10 @@
-import { Mic, MicOff, RadioTower, Sparkles } from 'lucide-react';
+import { Mic, MicOff, RadioTower, Sparkles, Settings2 } from 'lucide-react';
 import { AppState } from '../types';
 
 interface HeaderProps {
   appState: AppState;
   toggleConnection: () => Promise<void>;
+  onToggleConfig: () => void;
 }
 
 const stateLabel: Record<AppState, string> = {
@@ -14,7 +15,7 @@ const stateLabel: Record<AppState, string> = {
   error: 'Erreur de session',
 };
 
-export function Header({ appState, toggleConnection }: HeaderProps) {
+export function Header({ appState, toggleConnection, onToggleConfig }: HeaderProps) {
   const isLive = appState === 'listening' || appState === 'speaking';
 
   return (
@@ -35,6 +36,13 @@ export function Header({ appState, toggleConnection }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-3 md:gap-6">
+        <button
+          onClick={onToggleConfig}
+          className="hidden md:flex p-3 rounded-full border border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/10 hover:text-white transition-all"
+        >
+          <Settings2 className="w-4 h-4" />
+        </button>
+
         <div className="hidden md:flex px-4 py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.16em] items-center gap-2 border border-white/10 bg-white/[0.03]">
           <RadioTower className={`w-3.5 h-3.5 ${isLive ? 'text-emerald-300' : appState === 'error' ? 'text-rose-300' : 'text-white/50'}`} />
           <span className={`${isLive ? 'text-emerald-100' : appState === 'error' ? 'text-rose-100' : 'text-white/70'}`}>

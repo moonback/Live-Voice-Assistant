@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MicOff, Loader2, Volume2, Activity, Settings2, SlidersHorizontal, ShieldCheck, AudioLines } from 'lucide-react';
+import { MicOff, Loader2, Volume2, Activity, Settings2, SlidersHorizontal, ShieldCheck, AudioLines, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AudioStreamer } from './lib/audioUtils';
 import { Header } from './components/Header';
@@ -16,6 +16,7 @@ export default function App() {
   const [vadThreshold, setVadThreshold] = useState(-45);
   const [currentVolume, setCurrentVolume] = useState(-100);
   const [sessionId, setSessionId] = useState('');
+  const [isConfigOpen, setIsConfigOpen] = useState(true);
   const streamerRef = useRef<AudioStreamer | null>(null);
   const transcriptionsEndRef = useRef<HTMLDivElement>(null);
 
@@ -103,13 +104,27 @@ export default function App() {
         <div className="halo halo-gold" />
       </div>
 
-      <Header appState={appState} toggleConnection={toggleConnection} />
+      <Header appState={appState} toggleConnection={toggleConnection} onToggleConfig={() => setIsConfigOpen(!isConfigOpen)} />
 
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[300px_1fr_350px] overflow-hidden p-3 md:p-4 gap-3 md:gap-4">
-        <aside className="hidden lg:flex flex-col panel rounded-3xl overflow-hidden">
+      <main className="flex-1 flex overflow-hidden p-3 md:p-4 gap-3 md:gap-4 relative">
+        <motion.aside
+          initial={false}
+          animate={{
+            width: isConfigOpen ? 300 : 0,
+            opacity: isConfigOpen ? 1 : 0,
+            x: isConfigOpen ? 0 : -20
+          }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="hidden lg:flex flex-col panel rounded-3xl overflow-hidden shrink-0"
+        >
           <div className="panel-title-row">
             <span className="panel-title">Configuration</span>
-            <Settings2 className="w-4 h-4 text-white/45" />
+            <button
+              onClick={() => setIsConfigOpen(false)}
+              className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 text-white/45" />
+            </button>
           </div>
 
           <div className="p-6 space-y-6 flex-1 overflow-y-auto">
@@ -179,29 +194,16 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 pt-2">
-              <div className="mini-kpi">
-                <span>Latence estimée</span>
-                <strong>~120 ms</strong>
-              </div>
-              <div className="mini-kpi">
-                <span>Flux audio</span>
-                <strong>PCM HD · 24k</strong>
-              </div>
-              <div className="mini-kpi">
-                <span>Sécurité</span>
-                <strong>WSS / TLS 1.3</strong>
-              </div>
-            </div>
+
           </div>
 
           <div className="p-5 border-t border-white/10 bg-white/[0.02] flex items-center gap-2.5">
             <div className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
             <span className="text-[10px] uppercase tracking-[0.18em] text-white/55 font-semibold">Pipeline optimisé</span>
           </div>
-        </aside>
+        </motion.aside>
 
-        <section className="panel rounded-3xl flex flex-col items-center justify-center relative overflow-hidden px-6">
+        <section className="flex-1 panel rounded-3xl flex flex-col items-center justify-center relative overflow-hidden px-6">
           <div className="scanline" />
 
           <motion.div
@@ -238,8 +240,8 @@ export default function App() {
                   appState === 'error'
                     ? '0 0 110px rgba(251,113,133,0.55), inset 0 0 50px rgba(255,255,255,0.34)'
                     : appState === 'listening'
-                    ? '0 0 120px rgba(45,212,191,0.62), inset 0 0 45px rgba(255,255,255,0.32)'
-                    : '0 0 120px rgba(56,189,248,0.5), inset 0 0 45px rgba(255,255,255,0.28)',
+                      ? '0 0 120px rgba(45,212,191,0.62), inset 0 0 45px rgba(255,255,255,0.32)'
+                      : '0 0 120px rgba(56,189,248,0.5), inset 0 0 45px rgba(255,255,255,0.28)',
               }}
               transition={{ scale: { repeat: Infinity, duration: 1, ease: 'easeInOut' }, boxShadow: { duration: 0.4 } }}
             >
@@ -261,7 +263,7 @@ export default function App() {
           </div>
         </section>
 
-        <aside className="hidden lg:flex flex-col panel rounded-3xl overflow-hidden">
+        <aside className="hidden lg:flex flex-col panel rounded-3xl overflow-hidden w-[350px] shrink-0">
           <div className="panel-title-row">
             <span className="panel-title">Transcription live</span>
             <SlidersHorizontal className="w-4 h-4 text-white/45" />
