@@ -6,16 +6,22 @@ export class AudioStreamer {
   private sourceNode: MediaStreamAudioSourceNode | null = null;
   private nextPlayTime: number = 0;
   private activeSources: AudioBufferSourceNode[] = [];
+  private analyser: AnalyserNode | null = null;
   
-  public onStateChange?: (state: 'idle' | 'listening' | 'speaking' | 'error') => void;
+   public onStateChange?: (state: 'idle' | 'listening' | 'speaking' | 'error') => void;
   public onInterrupted?: () => void;
+  public onTranscript?: (text: string, reset?: boolean) => void;
+
+  getWs() {
+      return this.ws;
+  }
 
   async connect(wsUrl: string) {
     this.ws = new WebSocket(wsUrl);
     this.ws.binaryType = 'arraybuffer';
 
     this.ws.onopen = () => {
-      console.log('WebSocket connected');
+      console.log('[Connection] WebSocket stabilisé');
     };
 
     this.ws.onmessage = async (event) => {
@@ -25,11 +31,18 @@ export class AudioStreamer {
           this.handleInterruption();
         } else if (msg.type === 'turnComplete') {
           this.onStateChange?.('listening');
-        } else if (msg.type === 'system' && msg.message === 'connected') {
-          this.onStateChange?.('listening');
+          } else if (msg.type === 'text') {
+          console.log('[Transcript] Segment reçu:', msg.content);
+          this.onTranscript?.(msg.content, msg.reset);
         }
       } else if (event.data instanceof ArrayBuffer) {
-        this.onStateChange?.('speaking');
+        if (this.audioContext?.state === 'suspended') {
+           this.audioContext.resume();
+        }
+        // Éviter de spammer onStateChange si on est déjà en train de parler
+        if (this.onStateChange && !this.isPlayingAudio()) {
+          this.onStateChange('speaking');
+        }
         this.playAudio(event.data);
       }
     };
@@ -51,6 +64,10 @@ export class AudioStreamer {
       this.audioContext = new AudioContext({ sampleRate: 16000 });
       this.nextPlayTime = this.audioContext.currentTime;
 
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256;
+      this.analyser.smoothingTimeConstant = 0.8;
+
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -59,19 +76,33 @@ export class AudioStreamer {
         }
       });
 
-      // Create AudioWorklet for PCM conversion
       const workletCode = `
         class PCMProcessor extends AudioWorkletProcessor {
+          constructor() {
+            super();
+            this.threshold = 0.01; // Seuil pour éviter l'auto-interruption
+          }
           process(inputs, outputs, parameters) {
             const input = inputs[0];
             if (input && input.length > 0) {
               const channelData = input[0];
-              const pcm16 = new Int16Array(channelData.length);
+              
+              // Calcul simple du volume (RMS)
+              let sum = 0;
               for (let i = 0; i < channelData.length; i++) {
-                let s = Math.max(-1, Math.min(1, channelData[i]));
-                pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                sum += channelData[i] * channelData[i];
               }
-              this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
+              const rms = Math.sqrt(sum / channelData.length);
+
+              // N'envoyer que si le volume est significatif
+              if (rms > this.threshold) {
+                const pcm16 = new Int16Array(channelData.length);
+                for (let i = 0; i < channelData.length; i++) {
+                  let s = Math.max(-1, Math.min(1, channelData[i]));
+                  pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                }
+                this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
+              }
             }
             return true;
           }
@@ -87,12 +118,15 @@ export class AudioStreamer {
       this.workletNode.port.onmessage = (e) => {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(e.data); // Send ArrayBuffer
+        } else if (this.ws && this.ws.readyState !== WebSocket.CONNECTING) {
+           console.warn('[Audio] WebSocket non ouvert, abandon du buffer');
         }
       };
 
       this.sourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
-      this.sourceNode.connect(this.workletNode);
-      this.workletNode.connect(this.audioContext.destination); // Required to keep worklet alive in some browsers
+      this.sourceNode.connect(this.analyser);
+      this.analyser.connect(this.workletNode);
+      this.workletNode.connect(this.audioContext.destination); 
 
       this.onStateChange?.('listening');
     } catch (err) {
@@ -116,7 +150,13 @@ export class AudioStreamer {
 
     const source = this.audioContext.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(this.audioContext.destination);
+    
+    if (this.analyser) {
+        source.connect(this.analyser);
+        this.analyser.connect(this.audioContext.destination);
+    } else {
+        source.connect(this.audioContext.destination);
+    }
 
     if (this.nextPlayTime < this.audioContext.currentTime) {
       this.nextPlayTime = this.audioContext.currentTime;
@@ -143,6 +183,16 @@ export class AudioStreamer {
     });
     this.activeSources = [];
     this.onInterrupted?.();
+  }
+
+  getFrequencyData(dataArray: any) {
+    if (this.analyser) {
+      this.analyser.getByteFrequencyData(dataArray);
+    }
+  }
+
+  isPlayingAudio() {
+    return this.activeSources.length > 0;
   }
 
   stop() {

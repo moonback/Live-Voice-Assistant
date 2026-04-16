@@ -26,7 +26,9 @@ async function startServer() {
     // Parse configuration from URL
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const voiceName = url.searchParams.get('voice') || 'Zephyr';
-    const systemInstruction = url.searchParams.get('instruction') || "Tu es un assistant vocal expert, concis et naturel. Réponds toujours en français. Garde tes réponses courtes pour une conversation fluide.";
+    const systemInstruction = url.searchParams.get('instruction') || "Tu es un assistant vocal...";
+    
+    console.log(`[WS] Nouvelle connexion - Voix: ${voiceName}, Instruction: ${systemInstruction.substring(0, 50)}...`);
 
     // Connect to Gemini Live API
     const sessionPromise = ai.live.connect({
@@ -37,23 +39,27 @@ async function startServer() {
           ws.send(JSON.stringify({ type: 'system', message: 'connected' }));
         },
         onmessage: async (message: LiveServerMessage) => {
-          // Handle audio output from Gemini
           if (message.serverContent?.modelTurn) {
+            console.log(`[Gemini] Tour de modèle détecté (${message.serverContent.modelTurn.parts.length} parties)`);
+            ws.send(JSON.stringify({ type: 'text', content: '', reset: true }));
             const parts = message.serverContent.modelTurn.parts;
             for (const part of parts) {
               if (part.inlineData && part.inlineData.data) {
-                // Send binary audio to frontend
                 const buffer = Buffer.from(part.inlineData.data, 'base64');
                 ws.send(buffer);
               }
+              if (part.text && part.text.trim() !== "") {
+                console.log(`[Gemini] Texte reçu: "${part.text}"`);
+                ws.send(JSON.stringify({ type: 'text', content: part.text }));
+              }
             }
           }
-          // Handle interruption (barge-in)
           if (message.serverContent?.interrupted) {
+            console.log('[Gemini] Interruption détectée');
             ws.send(JSON.stringify({ type: 'interrupted' }));
           }
-          // Handle turn complete
           if (message.serverContent?.turnComplete) {
+            console.log('[Gemini] Fin du tour de parole');
             ws.send(JSON.stringify({ type: 'turnComplete' }));
           }
         },
@@ -84,7 +90,6 @@ async function startServer() {
 
     ws.on('message', (data) => {
       if (Buffer.isBuffer(data)) {
-        // Audio from client (PCM 16kHz)
         if (session) {
           const base64Audio = data.toString('base64');
           session.sendRealtimeInput({
@@ -92,14 +97,24 @@ async function startServer() {
           });
         }
       } else {
-        // JSON message from client
         try {
           const msg = JSON.parse(data.toString());
+          console.log(`[Client] Message JSON reçu: ${msg.type}`);
           if (msg.type === 'clientContent' && session && msg.text) {
+             console.log(`[Client] Texte envoyé manuellement: ${msg.text}`);
              session.sendRealtimeInput({ text: msg.text });
           }
+          if (msg.type === 'image' && session && msg.data) {
+             console.log('[Client] Frame vidéo reçue');
+             session.sendRealtimeInput({
+               mediaChunks: [{
+                 data: msg.data,
+                 mimeType: 'image/jpeg'
+               }]
+             });
+          }
         } catch (e) {
-          console.error('Error parsing WS message', e);
+          console.error('[WS] Erreur parsing message client', e);
         }
       }
     });

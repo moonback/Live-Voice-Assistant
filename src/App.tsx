@@ -4,6 +4,10 @@ import { motion } from 'motion/react';
 import { AudioStreamer } from './lib/audioUtils';
 import { getSystemPrompt, BASE_SYSTEM_PROMPT } from './lib/systemPrompt';
 import { PromptConfig } from './components/PromptConfig';
+import { LiveVisualizer } from './components/LiveVisualizer';
+import { VideoStreamer } from './lib/videoUtils';
+import { SessionStats } from './components/SessionStats';
+import { Camera, CameraOff, Video } from 'lucide-react';
 
 type AppState = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error';
 
@@ -44,7 +48,10 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>('idle');
   const [selectedPersona, setSelectedPersona] = useState<keyof typeof PERSONAS>('expert');
   const [customTraits, setCustomTraits] = useState('');
+  const [transcript, setTranscript] = useState('');
+  const [isVisionEnabled, setIsVisionEnabled] = useState(false);
   const streamerRef = useRef<AudioStreamer | null>(null);
+  const videoRef = useRef<VideoStreamer | null>(null);
 
   useEffect(() => {
     return () => {
@@ -56,20 +63,42 @@ export default function App() {
 
   const toggleConnection = async () => {
     if (appState !== 'idle' && appState !== 'error') {
-      // Disconnect
+      console.log('[Action] Fermeture manuelle de la session');
       streamerRef.current?.stop();
+      videoRef.current?.stop();
       streamerRef.current = null;
+      videoRef.current = null;
       setAppState('idle');
+      setTranscript('');
       return;
     }
 
+    console.log('[Action] Initialisation de la connexion...');
     setAppState('connecting');
     try {
       const streamer = new AudioStreamer();
       streamerRef.current = streamer;
 
       streamer.onStateChange = (state) => {
+        console.log(`[State] Transition vers: ${state}`);
         setAppState(state);
+        if (state === 'listening') {
+          // Keep transcript visible or reset it? 
+          // Usually better to keep it until next speaking turn
+        }
+      };
+
+      streamer.onTranscript = (text, reset) => {
+        if (reset) {
+          setTranscript(text);
+        } else {
+          setTranscript(prev => prev + text);
+        }
+      };
+
+      streamer.onInterrupted = () => {
+        console.log('[Event] L\'IA a été interrompue par l\'utilisateur');
+        setTranscript(prev => prev + '... [Interrompu]');
       };
 
       const persona = PERSONAS[selectedPersona];
@@ -81,6 +110,17 @@ export default function App() {
       
       await streamer.connect(wsUrl);
       await streamer.startRecording();
+
+      if (isVisionEnabled) {
+        console.log('[Action] Démarrage de la capture vidéo...');
+        const videoStreamer = new VideoStreamer();
+        videoRef.current = videoStreamer;
+        videoStreamer.start((base64) => {
+          if (streamer.getWs()?.readyState === WebSocket.OPEN) {
+            streamer.getWs()?.send(JSON.stringify({ type: 'image', data: base64 }));
+          }
+        });
+      }
     } catch (err) {
       console.error('Failed to start', err);
       setAppState('error');
@@ -183,6 +223,20 @@ export default function App() {
               </div>
             </div>
 
+            <label className="text-[12px] text-[#8E9299] mb-2 block mt-6">Mode Multimodal</label>
+            <button
+               onClick={() => setIsVisionEnabled(!isVisionEnabled)}
+               disabled={appState !== 'idle' && appState !== 'error'}
+               className={`w-full p-2.5 rounded-md text-[13px] font-medium flex items-center justify-center gap-2 border transition-all ${
+                 isVisionEnabled 
+                   ? 'bg-[#10B981]/10 border-[#10B981]/50 text-[#10B981]' 
+                   : 'bg-[#15171B] border-[#2A2D35] text-[#8E9299]'
+               }`}
+            >
+              {isVisionEnabled ? <Video className="w-4 h-4" /> : <CameraOff className="w-4 h-4" />}
+              {isVisionEnabled ? 'Vision Activée' : 'Activer Vision'}
+            </button>
+
             <label className="text-[12px] text-[#8E9299] mb-2 block mt-6">Pipeline Codec</label>
             <div className="font-mono text-[11px] text-[#10B981]">PCM @ 16kHz / 24kHz</div>
           </div>
@@ -194,16 +248,9 @@ export default function App() {
             <div className="absolute w-[300px] h-[300px] border border-[#3B82F6]/10 rounded-full" />
             <div className="absolute w-[220px] h-[220px] border border-[#3B82F6]/10 rounded-full" />
             
-            {appState === 'speaking' && (
-              <div className="absolute w-[280px] h-[100px] flex items-center justify-center gap-1 z-0 opacity-50">
-                {[40, 80, 120, 100, 140, 90, 50].map((h, i) => (
-                  <motion.div
-                    key={i}
-                    className="w-[3px] bg-[#3B82F6] rounded-sm"
-                    animate={{ height: [h * 0.3, h, h * 0.3] }}
-                    transition={{ repeat: Infinity, duration: 1 + i * 0.1, ease: "easeInOut" }}
-                  />
-                ))}
+            {(appState === 'speaking' || appState === 'listening') && (
+              <div className="absolute w-[280px] h-[100px] flex items-center justify-center z-0">
+                <LiveVisualizer streamer={streamerRef.current} active={appState === 'speaking' || appState === 'listening'} />
               </div>
             )}
 
@@ -250,9 +297,15 @@ export default function App() {
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scrollbar-hide">
             <PromptConfig instruction={getSystemPrompt(`${PERSONAS[selectedPersona].instruction}${customTraits.trim() ? ` Traits additionnels: ${customTraits}` : ''}`)} />
             
+            <SessionStats appState={appState} />
+
             <div className="p-5 border-t border-[#2A2D35] text-[13px] leading-relaxed bg-[#15171B]/50 rounded-xl">
               <div className="font-mono text-[10px] text-[#3B82F6] mb-1 uppercase">Transcription Live</div>
-              <span className="text-[#8E9299]">En attente de la transcription audio... (Non implémenté dans cette démo)</span>
+              <div className="text-[#D1D5DB] min-h-[100px] max-h-[200px] overflow-y-auto custom-scrollbar italic">
+                {transcript || (
+                  <span className="text-[#8E9299]">En attente de la parole d'IA...</span>
+                )}
+              </div>
             </div>
           </div>
           <div className="p-4 border-t border-[#2A2D35]">
