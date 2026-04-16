@@ -4,11 +4,12 @@ import { motion } from 'motion/react';
 import { AudioStreamer } from './lib/audioUtils';
 import { Header } from './components/Header';
 
-import { AppState, TranscriptionMsg, PERSONAS, PersonaKey } from './types';
+import { AppState, TranscriptionMsg, PERSONAS, PersonaKey, MODELS, ModelKey } from './types';
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>('idle');
   const [selectedPersona, setSelectedPersona] = useState<PersonaKey>('expert');
+  const [selectedModel, setSelectedModel] = useState<ModelKey>('gemini-3.1-flash');
   const [customTraits, setCustomTraits] = useState('');
   const [transcriptions, setTranscriptions] = useState<TranscriptionMsg[]>([]);
   const [vadThreshold, setVadThreshold] = useState(-45);
@@ -70,10 +71,11 @@ export default function App() {
       };
 
       const persona = PERSONAS[selectedPersona];
+      const model = MODELS[selectedModel];
       const finalInstruction = customTraits.trim() ? `${persona.instruction} Traits additionnels: ${customTraits}` : persona.instruction;
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?voice=${encodeURIComponent(persona.voice)}&instruction=${encodeURIComponent(finalInstruction)}`;
+      const wsUrl = `${protocol}//${window.location.host}/ws?voice=${encodeURIComponent(persona.voice)}&instruction=${encodeURIComponent(finalInstruction)}&model=${encodeURIComponent(model.id)}`;
 
       await streamer.connect(wsUrl);
       await streamer.startRecording();
@@ -121,6 +123,22 @@ export default function App() {
                 {Object.values(PERSONAS).map((p) => (
                   <option key={p.id} value={p.id} className="bg-[#131722]">
                     {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="label">Modèle IA</label>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value as ModelKey)}
+                disabled={appState !== 'idle' && appState !== 'error'}
+                className="control"
+              >
+                {Object.entries(MODELS).map(([key, m]) => (
+                  <option key={key} value={key} className="bg-[#131722]">
+                    {m.name}
                   </option>
                 ))}
               </select>
@@ -282,7 +300,7 @@ export default function App() {
               </div>
               <div className="metric-card">
                 <span>Modèle</span>
-                <strong>FLASH 1.5</strong>
+                <strong>{MODELS[selectedModel].label}</strong>
               </div>
             </div>
           </div>
