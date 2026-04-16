@@ -4,14 +4,14 @@ Objectif général : Transition d'un prototype haute performance vers un assista
 
 ---
 
-## 📍 Phase 1 : Fondations et Stabilité (T2 2026) - **EN COURS**
+## 📍 Phase 1 : Fondations et Stabilité (T2 2026) - **TERMINÉE**
 Focus sur la fiabilité, la qualité audio et la maintenabilité du code.
 
 - [x] **Refactorisation de l'Architecture Modulaire** : Extraction de composants indépendants (Header, Sidebar, Types) pour l'évolutivité.
 - [x] **Pipeline PCM Faible Latence** : Stabilisation de la capture 16kHz et de la lecture 24kHz.
-- [ ] **Buffer de Jitter Avancé** : Implémenter un buffer adaptatif pour gérer les fluctuations réseau sans artefacts audio.
-- [ ] **Optimisation de l'Annulation d'Écho (AEC)** : Ajuster les boucles de rétroaction pour éliminer l'écho sur haut-parleur.
-- [ ] **Sensibilité VAD Dynamique** : Permettre aux utilisateurs d'ajuster manuellement le seuil d'interruption pour les environnements bruyants.
+* [x] **Buffer de Jitter Avancé** : Implémentation d'un délai de garde adaptatif pour assurer une lecture fluide.
+- [x] **Optimisation de l'Annulation d'Écho (AEC)** : Configuration des contraintes média pour une suppression d'écho et de bruit optimale.
+- [x] **Sensibilité VAD Dynamique** : Ajout d'un slider interactif et d'une visualisation du volume en temps réel pour un contrôle précis.
 
 ---
 

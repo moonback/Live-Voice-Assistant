@@ -11,6 +11,9 @@ export default function App() {
   const [selectedPersona, setSelectedPersona] = useState<PersonaKey>('expert');
   const [customTraits, setCustomTraits] = useState('');
   const [transcriptions, setTranscriptions] = useState<TranscriptionMsg[]>([]);
+  const [vadThreshold, setVadThreshold] = useState(-45);
+  const [currentVolume, setCurrentVolume] = useState(-100);
+  const [sessionId, setSessionId] = useState('');
   const streamerRef = useRef<AudioStreamer | null>(null);
   const transcriptionsEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +42,7 @@ export default function App() {
 
     setAppState('connecting');
     setTranscriptions([]); // Clear previous transcriptions
+    setSessionId(Math.random().toString(36).substring(7).toUpperCase());
     try {
       const streamer = new AudioStreamer();
       streamerRef.current = streamer;
@@ -46,6 +50,12 @@ export default function App() {
       streamer.onStateChange = (state) => {
         setAppState(state);
       };
+
+      streamer.onVolumeChange = (db) => {
+        setCurrentVolume(db);
+      };
+
+      streamer.vadThreshold = vadThreshold;
 
       streamer.onTranscription = (role, text, finished) => {
         setTranscriptions(prev => {
@@ -116,10 +126,29 @@ export default function App() {
             <div className="mb-5">
               <div className="flex justify-between mb-2 text-[11px] text-[#8E9299]">
                 <span>Seuil VAD</span>
-                <span>-42dB</span>
+                <span>{vadThreshold}dB</span>
               </div>
-              <div className="h-1 bg-[#2A2D35] rounded-full relative">
-                <div className="absolute left-0 top-0 h-full bg-[#3B82F6] rounded-full w-[70%]"></div>
+              <input
+                type="range"
+                min="-100"
+                max="0"
+                value={vadThreshold}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setVadThreshold(val);
+                  if (streamerRef.current) streamerRef.current.vadThreshold = val;
+                }}
+                className="w-full h-1 bg-[#2A2D35] rounded-full appearance-none cursor-pointer accent-[#3B82F6]"
+              />
+              <div className="mt-2 h-1 bg-[#2A2D35] rounded-full overflow-hidden relative">
+                <div 
+                  className="absolute left-0 top-0 h-full bg-[#10B981] transition-all duration-100" 
+                  style={{ width: `${Math.max(0, Math.min(100, (currentVolume + 100)))}%` }}
+                />
+                <div 
+                  className="absolute top-0 h-full border-r border-white/50 z-10" 
+                  style={{ left: `${vadThreshold + 100}%` }}
+                />
               </div>
             </div>
 
@@ -218,7 +247,7 @@ export default function App() {
             <div className="text-[12px] text-[#8E9299] leading-relaxed">
               Modèle : gemini-3.1-flash-live-preview<br/>
               Modalité : Audio-to-Audio<br/>
-              Session ID : {Math.random().toString(36).substring(7)}
+              Session ID : {sessionId || 'NON DÉFINI'}
             </div>
           </div>
         </aside>

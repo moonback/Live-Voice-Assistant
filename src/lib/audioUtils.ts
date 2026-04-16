@@ -10,6 +10,8 @@ export class AudioStreamer {
   public onStateChange?: (state: 'idle' | 'listening' | 'speaking' | 'error') => void;
   public onInterrupted?: () => void;
   public onTranscription?: (role: 'user' | 'model', text: string, finished: boolean) => void;
+  public onVolumeChange?: (db: number) => void;
+  public vadThreshold: number = -45; // Default dB threshold
 
   async connect(wsUrl: string) {
     this.ws = new WebSocket(wsUrl);
@@ -62,19 +64,31 @@ export class AudioStreamer {
         }
       });
 
-      // Create AudioWorklet for PCM conversion
+      // Create AudioWorklet for PCM conversion and VAD
       const workletCode = `
         class PCMProcessor extends AudioWorkletProcessor {
           process(inputs, outputs, parameters) {
             const input = inputs[0];
             if (input && input.length > 0) {
               const channelData = input[0];
+              
+              // Calculate RMS (Root Mean Square) for VAD
+              let sum = 0;
+              for (let i = 0; i < channelData.length; i++) {
+                sum += channelData[i] * channelData[i];
+              }
+              const rms = Math.sqrt(sum / channelData.length);
+              const db = 20 * Math.log10(rms || 0.000001);
+              
+              // Send volume level to main thread for UI
+              this.port.postMessage({ type: 'volume', db: db });
+
               const pcm16 = new Int16Array(channelData.length);
               for (let i = 0; i < channelData.length; i++) {
                 let s = Math.max(-1, Math.min(1, channelData[i]));
                 pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
               }
-              this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
+              this.port.postMessage({ type: 'audio', buffer: pcm16.buffer, db: db }, [pcm16.buffer]);
             }
             return true;
           }
@@ -88,8 +102,18 @@ export class AudioStreamer {
       
       this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor');
       this.workletNode.port.onmessage = (e) => {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-          this.ws.send(e.data); // Send ArrayBuffer
+        if (e.data.type === 'volume') {
+          this.onVolumeChange?.(e.data.db);
+          return;
+        }
+
+        if (e.data.type === 'audio') {
+          // Local Gating Logic
+          if (e.data.db > this.vadThreshold) {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+              this.ws.send(e.data.buffer);
+            }
+          }
         }
       };
 
@@ -121,8 +145,10 @@ export class AudioStreamer {
     source.buffer = audioBuffer;
     source.connect(this.audioContext.destination);
 
+    const BUFFER_DELAY = 0.15; // 150ms buffer for jitter
+    
     if (this.nextPlayTime < this.audioContext.currentTime) {
-      this.nextPlayTime = this.audioContext.currentTime;
+      this.nextPlayTime = this.audioContext.currentTime + BUFFER_DELAY;
     }
     
     source.start(this.nextPlayTime);
