@@ -90,43 +90,52 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#0C0D0E] text-white flex flex-col font-sans overflow-hidden">
+    <div className="h-screen w-screen flex flex-col overflow-hidden relative">
+      <div className="mesh-bg">
+        <div className="mesh-1" />
+        <div className="mesh-2" />
+      </div>
+
       <Header appState={appState} toggleConnection={toggleConnection} />
 
       {/* Main Layout */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[280px_1fr_320px] gap-[1px] bg-[#2A2D35] overflow-hidden">
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[300px_1fr_340px] overflow-hidden p-3 gap-3">
         
-        {/* Left Panel */}
-        <aside className="hidden lg:flex flex-col bg-[#0C0D0E]">
-          <div className="p-4 border-b border-[#2A2D35] flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-[#8E9299] uppercase tracking-[1px]">Configuration Audio</span>
+        {/* Left Panel: Configuration */}
+        <aside className="hidden lg:flex flex-col glass rounded-2xl overflow-hidden shadow-2xl">
+          <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+            <span className="text-[11px] font-bold text-white/50 uppercase tracking-[2px]">Configuration</span>
           </div>
-          <div className="p-5">
-            <label className="text-[12px] text-[#8E9299] mb-2 block">Personnalité & Voix</label>
-            <select 
-              value={selectedPersona}
-              onChange={(e) => setSelectedPersona(e.target.value as keyof typeof PERSONAS)}
-              disabled={appState !== 'idle' && appState !== 'error'}
-              className="w-full bg-[#15171B] border border-[#2A2D35] p-2.5 rounded-md text-white mb-4 text-[13px] outline-none focus:border-[#3B82F6] disabled:opacity-50"
-            >
-              {Object.values(PERSONAS).map(p => (
-                <option key={p.id} value={p.id}>{p.name} - Voix: {p.voice}</option>
-              ))}
-            </select>
+          <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+            <div>
+              <label className="text-[12px] text-white/40 mb-2 block font-medium">Personnalité & Voix</label>
+              <select 
+                value={selectedPersona}
+                onChange={(e) => setSelectedPersona(e.target.value as keyof typeof PERSONAS)}
+                disabled={appState !== 'idle' && appState !== 'error'}
+                className="w-full bg-white/[0.03] border border-white/10 p-3 rounded-xl text-white text-[13px] outline-none focus:ring-2 ring-blue-500/20 disabled:opacity-40 appearance-none cursor-pointer"
+              >
+                {Object.values(PERSONAS).map(p => (
+                  <option key={p.id} value={p.id} className="bg-[#0c0e11]">{p.name}</option>
+                ))}
+              </select>
+            </div>
 
-            <label className="text-[12px] text-[#8E9299] mb-2 block">Traits additionnels (Optionnel)</label>
-            <textarea
-              value={customTraits}
-              onChange={(e) => setCustomTraits(e.target.value)}
-              disabled={appState !== 'idle' && appState !== 'error'}
-              placeholder="Ex: Parle comme un pirate, sois sarcastique..."
-              className="w-full bg-[#15171B] border border-[#2A2D35] p-2.5 rounded-md text-white mb-6 text-[13px] outline-none focus:border-[#3B82F6] disabled:opacity-50 resize-none h-20"
-            />
+            <div>
+              <label className="text-[12px] text-white/40 mb-2 block font-medium">Instruction Spécifique</label>
+              <textarea
+                value={customTraits}
+                onChange={(e) => setCustomTraits(e.target.value)}
+                disabled={appState !== 'idle' && appState !== 'error'}
+                placeholder="Ex: Sois sarcastique, parle comme un pirate..."
+                className="w-full bg-white/[0.03] border border-white/10 p-3 rounded-xl text-white text-[13px] outline-none focus:ring-2 ring-blue-500/20 disabled:opacity-40 resize-none h-24 placeholder:text-white/20"
+              />
+            </div>
             
-            <div className="mb-5">
-              <div className="flex justify-between mb-2 text-[11px] text-[#8E9299]">
-                <span>Seuil VAD</span>
-                <span>{vadThreshold}dB</span>
+            <div className="pt-4 border-t border-white/5">
+              <div className="flex justify-between mb-3 text-[11px] font-bold tracking-widest text-white/40">
+                <span>SEUIL VAD</span>
+                <span className="text-blue-400">{vadThreshold}dB</span>
               </div>
               <input
                 type="range"
@@ -138,129 +147,198 @@ export default function App() {
                   setVadThreshold(val);
                   if (streamerRef.current) streamerRef.current.vadThreshold = val;
                 }}
-                className="w-full h-1 bg-[#2A2D35] rounded-full appearance-none cursor-pointer accent-[#3B82F6]"
+                className="w-full h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer accent-blue-500"
               />
-              <div className="mt-2 h-1 bg-[#2A2D35] rounded-full overflow-hidden relative">
-                <div 
-                  className="absolute left-0 top-0 h-full bg-[#10B981] transition-all duration-100" 
+              <div className="mt-4 h-2 bg-white/5 rounded-full overflow-hidden relative">
+                <motion.div 
+                  className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-500 to-emerald-400 group-hover:from-emerald-400 group-hover:to-emerald-300 transition-all duration-100" 
                   style={{ width: `${Math.max(0, Math.min(100, (currentVolume + 100)))}%` }}
                 />
                 <div 
-                  className="absolute top-0 h-full border-r border-white/50 z-10" 
+                  className="absolute top-0 h-full border-r-2 border-white/30 z-10" 
                   style={{ left: `${vadThreshold + 100}%` }}
                 />
               </div>
             </div>
 
-            <div className="mb-5">
-              <div className="flex justify-between mb-2 text-[11px] text-[#8E9299]">
-                <span>Suppression de Bruit</span>
-                <span>High</span>
-              </div>
-              <div className="h-1 bg-[#2A2D35] rounded-full relative">
-                <div className="absolute left-0 top-0 h-full bg-[#3B82F6] rounded-full w-[85%]"></div>
-              </div>
+            <div className="space-y-4 pt-4">
+               <div className="flex items-center justify-between text-[11px] text-white/30">
+                  <span>LATENCE PRÉVUE</span>
+                  <span className="text-emerald-500 font-mono">~120MS</span>
+               </div>
+               <div className="flex items-center justify-between text-[11px] text-white/30">
+                  <span>QUALITÉ AUDIO</span>
+                  <span className="text-blue-500 font-mono">HD PCM</span>
+               </div>
             </div>
+          </div>
 
-            <label className="text-[12px] text-[#8E9299] mb-2 block mt-6">Pipeline Codec</label>
-            <div className="font-mono text-[11px] text-[#10B981]">PCM @ 16kHz / 24kHz</div>
+          <div className="p-5 bg-white/[0.02] border-t border-white/5">
+            <div className="flex items-center gap-3">
+               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+               <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Pipeline Optimisé</span>
+            </div>
           </div>
         </aside>
 
-        {/* Center Stage */}
-        <section className="flex flex-col items-center justify-center relative bg-[radial-gradient(circle_at_center,#1A1D23_0%,#0C0D0E_100%)]">
-          <div className="relative w-[300px] h-[300px] flex items-center justify-center">
-            <div className="absolute w-[300px] h-[300px] border border-[#3B82F6]/10 rounded-full" />
-            <div className="absolute w-[220px] h-[220px] border border-[#3B82F6]/10 rounded-full" />
+        {/* Center Stage: The Core */}
+        <section className="flex flex-col items-center justify-center relative rounded-2xl overflow-hidden glass shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
+          
+          <div className="relative w-[400px] h-[400px] flex items-center justify-center">
+            {/* Background Rings */}
+            <motion.div 
+              className="absolute w-full h-full border border-white/5 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+            />
+            <motion.div 
+              className="absolute w-[80%] h-[80%] border border-white/5 rounded-full border-dashed"
+              animate={{ rotate: -360 }}
+              transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
+            />
             
+            {/* Audio Waves when speaking */}
             {appState === 'speaking' && (
-              <div className="absolute w-[280px] h-[100px] flex items-center justify-center gap-1 z-0 opacity-50">
-                {[40, 80, 120, 100, 140, 90, 50].map((h, i) => (
+              <div className="absolute inset-0 flex items-center justify-center gap-2 z-0">
+                {[...Array(12)].map((_, i) => (
                   <motion.div
                     key={i}
-                    className="w-[3px] bg-[#3B82F6] rounded-sm"
-                    animate={{ height: [h * 0.3, h, h * 0.3] }}
-                    transition={{ repeat: Infinity, duration: 1 + i * 0.1, ease: "easeInOut" }}
+                    className="w-[3px] bg-blue-400/50 rounded-full"
+                    animate={{ 
+                      height: [20, 100 + Math.random() * 100, 20],
+                      opacity: [0.3, 1, 0.3]
+                    }}
+                    transition={{ 
+                      repeat: Infinity, 
+                      duration: 0.6 + Math.random() * 0.4, 
+                      ease: "easeInOut",
+                      delay: i * 0.05
+                    }}
                   />
                 ))}
               </div>
             )}
 
+            {/* Core Orb */}
             <motion.div
-              className="w-[120px] h-[120px] rounded-full flex items-center justify-center relative z-10"
+              className="w-40 h-40 rounded-full flex items-center justify-center relative z-10 cursor-pointer"
               animate={{
-                backgroundColor: appState === 'error' ? '#EF4444' : appState === 'listening' ? '#10B981' : '#3B82F6',
+                backgroundColor: appState === 'error' ? '#ef4444' : appState === 'listening' ? '#10b981' : '#3b82f6',
                 boxShadow: appState === 'error' 
-                  ? '0 0 60px rgba(239,68,68,0.2), 0 0 120px rgba(239,68,68,0.2)' 
+                  ? '0 0 80px rgba(239,68,68,0.4), inset 0 0 20px rgba(255,255,255,0.4)' 
                   : appState === 'listening'
-                  ? '0 0 60px rgba(16,185,129,0.2), 0 0 120px rgba(16,185,129,0.2)'
-                  : '0 0 60px rgba(59,130,246,0.2), 0 0 120px rgba(59,130,246,0.2)',
-                scale: appState === 'speaking' ? [1, 1.1, 1] : 1,
+                  ? '0 0 80px rgba(16,185,129,0.4), inset 0 0 20px rgba(255,255,255,0.4)'
+                  : '0 0 80px rgba(59,130,246,0.4), inset 0 0 20px rgba(255,255,255,0.4)',
+                scale: appState === 'speaking' ? [1, 1.05, 1] : 1,
               }}
-              transition={{ scale: { repeat: Infinity, duration: 0.8 } }}
+              transition={{ 
+                scale: { repeat: Infinity, duration: 1, ease: "easeInOut" },
+                backgroundColor: { duration: 0.5 }
+              }}
+              onClick={toggleConnection}
             >
-              {appState === 'idle' && <MicOff className="w-10 h-10 text-white" />}
-              {appState === 'connecting' && <Loader2 className="w-10 h-10 text-white animate-spin" />}
-              {appState === 'listening' && <Activity className="w-10 h-10 text-white" />}
-              {appState === 'speaking' && <Volume2 className="w-10 h-10 text-white" />}
-              {appState === 'error' && <MicOff className="w-10 h-10 text-white" />}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+              {appState === 'idle' && <MicOff className="w-12 h-12 text-white drop-shadow-lg" />}
+              {appState === 'connecting' && <Loader2 className="w-12 h-12 text-white animate-spin drop-shadow-lg" />}
+              {appState === 'listening' && <Activity className="w-12 h-12 text-white drop-shadow-lg" />}
+              {appState === 'speaking' && <Volume2 className="w-12 h-12 text-white drop-shadow-lg" />}
+              {appState === 'error' && <MicOff className="w-12 h-12 text-white drop-shadow-lg" />}
             </motion.div>
           </div>
 
-          <div className="mt-10 text-center z-10">
-            <h2 className="text-2xl font-light mb-2 text-white">
-              {appState === 'idle' && 'Prêt à commencer'}
-              {appState === 'connecting' && 'Connexion en cours...'}
-              {appState === 'listening' && 'L\'IA vous écoute...'}
-              {appState === 'speaking' && 'Gemini parle...'}
-              {appState === 'error' && 'Erreur de connexion'}
-            </h2>
-            <p className="text-[#8E9299] text-sm">
-              {appState === 'idle' ? 'Cliquez sur Démarrer la session pour activer le micro.' : 'Parlez naturellement, vous pouvez l\'interrompre à tout moment.'}
+          <div className="mt-12 text-center z-10 px-6">
+            <motion.h2 
+              className="text-3xl font-bold mb-3 tracking-tight"
+              key={appState}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {appState === 'idle' && 'Prêt pour l\'échange'}
+              {appState === 'connecting' && 'Initialisation...'}
+              {appState === 'listening' && 'À votre écoute'}
+              {appState === 'speaking' && 'Réponse en cours'}
+              {appState === 'error' && 'Session Interrompue'}
+            </motion.h2>
+            <p className="text-white/40 text-sm max-w-sm mx-auto font-medium">
+              {appState === 'idle' ? 'Configurez votre assistant et cliquez sur l\'orb pour démarrer.' : 'Interaction fluide en temps réel. Parlez quand vous voulez.'}
             </p>
           </div>
         </section>
 
-        {/* Right Panel */}
-        <aside className="hidden lg:flex flex-col bg-[#0C0D0E]">
-          <div className="p-4 border-b border-[#2A2D35] flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-[#8E9299] uppercase tracking-[1px]">Transcription Live</span>
+        {/* Right Panel: Transcriptions */}
+        <aside className="hidden lg:flex flex-col glass rounded-2xl overflow-hidden shadow-2xl">
+          <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+            <span className="text-[11px] font-bold text-white/50 uppercase tracking-[2px]">Transcription Live</span>
+            {appState !== 'idle' && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">Live</span>
+              </div>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto flex flex-col p-5 gap-4">
+          
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {transcriptions.length === 0 ? (
-              <div className="text-[13px] text-[#8E9299] italic">En attente de la conversation...</div>
+              <div className="h-full flex flex-col items-center justify-center text-white/20 space-y-4">
+                 <div className="p-4 rounded-full bg-white/[0.02] border border-white/5">
+                    <Activity className="w-6 h-6" />
+                 </div>
+                 <p className="text-[13px] italic font-medium">En attente de conversation...</p>
+              </div>
             ) : (
               transcriptions.map((msg) => (
-                <div key={msg.id} className="text-[13px] leading-relaxed">
-                  <div className={`font-mono text-[10px] mb-1 uppercase ${msg.role === 'user' ? 'text-[#10B981]' : 'text-[#3B82F6]'}`}>
-                    {msg.role === 'user' ? 'Vous' : 'Gemini'}
+                <motion.div 
+                  key={msg.id} 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-1.5"
+                >
+                  <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${msg.role === 'user' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                    <span>{msg.role === 'user' ? 'Vous' : 'Gemini'}</span>
+                    <div className={`h-[1px] flex-1 ${msg.role === 'user' ? 'bg-emerald-400/10' : 'bg-blue-400/10'}`} />
                   </div>
-                  <span className="text-white">{msg.text}</span>
-                  {!msg.finished && <span className="inline-block w-1.5 h-3 ml-1 bg-[#8E9299] animate-pulse" />}
-                </div>
+                  <div className={`text-[14px] leading-relaxed text-white/90 font-medium ${!msg.finished ? 'opacity-70' : ''}`}>
+                    {msg.text}
+                    {!msg.finished && <span className="inline-block w-1.5 h-3.5 ml-1.5 bg-blue-500/50 animate-pulse rounded-sm align-middle" />}
+                  </div>
+                </motion.div>
               ))
             )}
             <div ref={transcriptionsEndRef} />
           </div>
-          <div className="p-4 border-t border-[#2A2D35]">
-            <span className="text-[11px] font-semibold text-[#8E9299] uppercase tracking-[1px] block mb-3">Contexte Actif</span>
-            <div className="text-[12px] text-[#8E9299] leading-relaxed">
-              Modèle : gemini-3.1-flash-live-preview<br/>
-              Modalité : Audio-to-Audio<br/>
-              Session ID : {sessionId || 'NON DÉFINI'}
+
+          <div className="p-5 bg-white/[0.02] border-t border-white/5 space-y-4">
+            <div>
+               <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-2">Métriques Session</span>
+               <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                  <div className="bg-black/20 p-2 rounded-lg border border-white/5">
+                     <span className="text-white/20 block">ID SESSION</span>
+                     <span className="text-blue-400 truncate block">{sessionId || '---'}</span>
+                  </div>
+                  <div className="bg-black/20 p-2 rounded-lg border border-white/5">
+                     <span className="text-white/20 block">MODÈLE</span>
+                     <span className="text-emerald-400 block">FLASH 1.5</span>
+                  </div>
+               </div>
             </div>
           </div>
         </aside>
 
       </main>
 
-      {/* Footer */}
-      <footer className="h-10 bg-[#15171B] border-t border-[#2A2D35] flex items-center px-6 gap-8 text-[11px] font-mono text-[#8E9299] shrink-0 overflow-x-auto whitespace-nowrap">
-        <div className="flex gap-2">LATENCE E2E: <span className="text-[#10B981]">~150ms</span></div>
-        <div className="flex gap-2">JITTER: <span className="text-[#10B981]">12ms</span></div>
-        <div className="flex gap-2">SIGNALISATION: <span className="text-[#10B981]">WebSocket</span></div>
-        <div className="flex gap-2">PROTOCOL: <span className="text-[#10B981]">WSS/TCP</span></div>
-        <div className="flex gap-2 ml-auto">ENCRYPTÉ: <span className="text-[#10B981]">TLS 1.3</span></div>
+      {/* Footer Status Bar */}
+      <footer className="h-12 glass border-t border-white/5 flex items-center px-6 gap-8 text-[10px] font-bold text-white/30 uppercase tracking-widest shrink-0">
+        <div className="flex items-center gap-2">
+           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+           <span className="hidden sm:inline">Streamer:</span> <span className="text-white/60 font-mono">Actif</span>
+        </div>
+        <div className="flex items-center gap-2 border-l border-white/10 pl-8">
+           <span className="hidden sm:inline">Codec:</span> <span className="text-white/60 font-mono">L16 @ 24kHz</span>
+        </div>
+        <div className="flex items-center gap-2 border-l border-white/10 pl-8 ml-auto">
+           <span className="hidden sm:inline">Protection:</span> <span className="text-emerald-500 font-mono">WSS/TLS-v1.3</span>
+        </div>
       </footer>
     </div>
   );
